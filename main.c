@@ -57,6 +57,11 @@ int maxpreset;
 char disp_maxpreset;
 char progcode;
 
+//lastpresetchange
+char *disp_lastchangesec;
+char *disp_lastchangemin;
+char *disp_lastchangehour;
+
 int doLCD = 0;
 
 int main() {
@@ -65,6 +70,13 @@ int main() {
 	disp_avg = malloc(6 * sizeof(char));
 	disp_preset = malloc(2 * sizeof(char));
 	disp_maxpreset = malloc(2 * sizeof(char));
+
+	disp_lastchangesec = malloc(2 * sizeof(char));
+	disp_lastchangemin = malloc(2 * sizeof(char));
+	disp_lastchangehour = malloc(2 * sizeof(char));
+	disp_lastchangesec = '0';
+	disp_lastchangemin = '0';
+	disp_lastchangehour = '0';
 
 	disp_seconds = malloc(3 * sizeof(char));
 	disp_minutes = malloc(3 * sizeof(char));
@@ -82,6 +94,8 @@ int main() {
 			if (preset < maxpreset) {
 				preset++;
 				resetcounters();
+				setLastPresetChange();
+
 			}
 		} else {
 			butUpPressed = 0;
@@ -91,6 +105,7 @@ int main() {
 			if (preset > 0) {
 				preset--;
 				resetcounters();
+				setLastPresetChange();
 			}
 		} else {
 			butDnPressed = 0;
@@ -115,16 +130,28 @@ int main() {
 				if(pc_read >= 0 && pc_read < 10){
 					preset = pc_read;
 				}else if(pc_read == '#'){
+					while(uartReceiveBufferIsEmpty());
 					maxpreset = uartGetByte();
+					preset = 0;
 				}else if(pc_read == '$'){
+					while(uartReceiveBufferIsEmpty());
 					presettomodify = uartGetByte();
+					while(uartReceiveBufferIsEmpty());
 					led1Counterup[presettomodify] = uartGetByte();
+					while(uartReceiveBufferIsEmpty());
 					led2Counterup[presettomodify] = uartGetByte();
+					while(uartReceiveBufferIsEmpty());
 					led3Counterup[presettomodify] = uartGetByte();
 
+					while(uartReceiveBufferIsEmpty());
 					led1Counterdn[presettomodify] = uartGetByte();
+					while(uartReceiveBufferIsEmpty());
 					led2Counterdn[presettomodify] = uartGetByte();
+					while(uartReceiveBufferIsEmpty());
 					led3Counterdn[presettomodify] = uartGetByte();
+				}else if(pc_read == '&'){
+					while(uartReceiveBufferIsEmpty());
+					presettomodify = uartGetByte();
 				}
 			}
 
@@ -185,7 +212,7 @@ static void setup() {
 }
 
 unsigned long filter_adc() {
-	unsigned long adc_value = 0;
+	/*unsigned long adc_value = 0;
 	unsigned long tmp_value = 0;
 	unsigned long sample = 0;
 
@@ -197,7 +224,8 @@ unsigned long filter_adc() {
 
 	adc_value = (tmp_value / no_of_samples);
 	tmp_value = (sqrt(adc_value));
-	return tmp_value;
+	return tmp_value;*/
+	return adc_read();
 
 }
 
@@ -308,6 +336,12 @@ void resetcounters(){
 	led3Up = 0;
 }
 
+void setLastPresetChange(){
+	snprintf(disp_lastchangesec, 2, "%d", seconds);
+	snprintf(disp_lastchangemin, 2, "%d", minutes);
+	snprintf(disp_lastchangehour, 2, "%d", hours);
+}
+
 void updateLCD(){
 	snprintf(disp_avg, 4, "%lu", avg);
 
@@ -329,5 +363,11 @@ void updateLCD(){
 
 	LCDWriteStringXY(1, 14, progcode);
 
-	LCDWriteStringXY(2, 6, disp_avg);
+	LCDWriteStringXY(2, 6, disp_lastchangehour);
+	LCDWriteStringXY(2, 8, ":");
+	LCDWriteStringXY(2, 9, disp_lastchangemin);
+	LCDWriteStringXY(2, 11, ":");
+	LCDWriteStringXY(2, 12, disp_lastchangesec);
+
+	LCDWriteStringXY(2, 1, disp_avg);
 }
