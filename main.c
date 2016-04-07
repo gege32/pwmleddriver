@@ -71,12 +71,12 @@ int main() {
 	disp_preset = malloc(2 * sizeof(char));
 	disp_maxpreset = malloc(2 * sizeof(char));
 
-	disp_lastchangesec = malloc(2 * sizeof(char));
-	disp_lastchangemin = malloc(2 * sizeof(char));
-	disp_lastchangehour = malloc(2 * sizeof(char));
-	disp_lastchangesec = '0';
-	disp_lastchangemin = '0';
-	disp_lastchangehour = '0';
+	disp_lastchangesec = malloc(3 * sizeof(char));
+	disp_lastchangemin = malloc(3 * sizeof(char));
+	disp_lastchangehour = malloc(3 * sizeof(char));
+	disp_lastchangesec = '00';
+	disp_lastchangemin = '00';
+	disp_lastchangehour = '00';
 
 	disp_seconds = malloc(3 * sizeof(char));
 	disp_minutes = malloc(3 * sizeof(char));
@@ -111,6 +111,7 @@ int main() {
 			butDnPressed = 0;
 		}
 
+		//check changes to send to pc
 		if (avg != lastAvg) {
 			rprintfChar('L');
 			rprintfNum(10, 4, FALSE, '0', avg);
@@ -337,9 +338,9 @@ void resetcounters(){
 }
 
 void setLastPresetChange(){
-	snprintf(disp_lastchangesec, 2, "%d", seconds);
-	snprintf(disp_lastchangemin, 2, "%d", minutes);
-	snprintf(disp_lastchangehour, 2, "%d", hours);
+	snprintf(disp_lastchangesec, 3, "%d", seconds);
+	snprintf(disp_lastchangemin, 3, "%d", minutes);
+	snprintf(disp_lastchangehour, 3, "%d", hours);
 }
 
 void updateLCD(){

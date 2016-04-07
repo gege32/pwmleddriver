@@ -1768,7 +1768,7 @@ void setLastPresetChange(){
      73c:	1f 93       	push	r17
      73e:	cf 93       	push	r28
      740:	df 93       	push	r29
-	snprintf(disp_lastchangesec, 2, "%d", seconds);
+	snprintf(disp_lastchangesec, 3, "%d", seconds);
      742:	80 91 fb 00 	lds	r24, 0x00FB
      746:	8f 93       	push	r24
      748:	80 91 fa 00 	lds	r24, 0x00FA
@@ -1778,14 +1778,14 @@ void setLastPresetChange(){
      752:	df 93       	push	r29
      754:	cf 93       	push	r28
      756:	1f 92       	push	r1
-     758:	12 e0       	ldi	r17, 0x02	; 2
+     758:	13 e0       	ldi	r17, 0x03	; 3
      75a:	1f 93       	push	r17
      75c:	80 91 a4 01 	lds	r24, 0x01A4
      760:	8f 93       	push	r24
      762:	80 91 a3 01 	lds	r24, 0x01A3
      766:	8f 93       	push	r24
      768:	71 d8       	rcall	.-3870   	; 0xfffff84c <__eeprom_end+0xff7ef84c>
-	snprintf(disp_lastchangemin, 2, "%d", minutes);
+	snprintf(disp_lastchangemin, 3, "%d", minutes);
      76a:	80 91 f9 00 	lds	r24, 0x00F9
      76e:	8f 93       	push	r24
      770:	80 91 f8 00 	lds	r24, 0x00F8
@@ -1799,7 +1799,7 @@ void setLastPresetChange(){
      784:	80 91 ad 01 	lds	r24, 0x01AD
      788:	8f 93       	push	r24
      78a:	60 d8       	rcall	.-3904   	; 0xfffff84c <__eeprom_end+0xff7ef84c>
-	snprintf(disp_lastchangehour, 2, "%d", hours);
+	snprintf(disp_lastchangehour, 3, "%d", hours);
      78c:	80 91 f7 00 	lds	r24, 0x00F7
      790:	8f 93       	push	r24
      792:	80 91 f6 00 	lds	r24, 0x00F6
@@ -2260,18 +2260,18 @@ int main() {
      a00:	fe d5       	rcall	.+3068   	; 0x15fe <malloc>
      a02:	80 93 a2 01 	sts	0x01A2, r24
 
-	disp_lastchangesec = malloc(2 * sizeof(char));
-	disp_lastchangemin = malloc(2 * sizeof(char));
-	disp_lastchangehour = malloc(2 * sizeof(char));
-	disp_lastchangesec = '0';
+	disp_lastchangesec = malloc(3 * sizeof(char));
+	disp_lastchangemin = malloc(3 * sizeof(char));
+	disp_lastchangehour = malloc(3 * sizeof(char));
+	disp_lastchangesec = '00';
      a06:	80 e3       	ldi	r24, 0x30	; 48
-     a08:	90 e0       	ldi	r25, 0x00	; 0
+     a08:	90 e3       	ldi	r25, 0x30	; 48
      a0a:	90 93 a4 01 	sts	0x01A4, r25
      a0e:	80 93 a3 01 	sts	0x01A3, r24
-	disp_lastchangemin = '0';
+	disp_lastchangemin = '00';
      a12:	90 93 ae 01 	sts	0x01AE, r25
      a16:	80 93 ad 01 	sts	0x01AD, r24
-	disp_lastchangehour = '0';
+	disp_lastchangehour = '00';
      a1a:	90 93 9d 01 	sts	0x019D, r25
      a1e:	80 93 9c 01 	sts	0x019C, r24
 
@@ -2489,11 +2489,11 @@ void resetcounters(){
 				resetcounters();
 				setLastPresetChange();
      b6e:	e6 dd       	rcall	.-1076   	; 0x73c <setLastPresetChange>
-			}
 		} else {
 			butDnPressed = 0;
 		}
 
+		//check changes to send to pc
 		if (avg != lastAvg) {
      b70:	40 91 06 01 	lds	r20, 0x0106
      b74:	50 91 07 01 	lds	r21, 0x0107
