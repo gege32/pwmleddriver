@@ -12,6 +12,7 @@
 unsigned long filter_adc();
 unsigned long adc_read();
 void LCDWriteStringXY(int x, int y, const char *s);
+void LCDWriteCharXY(int x, int y, char s);
 void resetcounters();
 void updateLCD();
 
@@ -45,12 +46,8 @@ int pc_read = 0;
 int presettomodify = -1;
 
 //uptime
-int seconds=0;
-int minutes=0;
-int hours=0;
-char *disp_seconds;
-char *disp_minutes;
-char *disp_hours;
+char *disp_uptime;
+int requestTime = 0; //0 nothing to do, 1 should send request, 2-12 waiting for answer
 
 //program parameters
 int maxpreset;
@@ -58,35 +55,29 @@ char disp_maxpreset;
 char progcode;
 
 //lastpresetchange
-char *disp_lastchangesec;
-char *disp_lastchangemin;
-char *disp_lastchangehour;
+char *disp_lastchange;
+
 
 int doLCD = 0;
 
 int main() {
 	maxpreset = 9;
-	progcode="Z";
+	progcode = 'Z';
+
 	disp_avg = malloc(6 * sizeof(char));
 	disp_preset = malloc(2 * sizeof(char));
 	disp_maxpreset = malloc(2 * sizeof(char));
-
-	disp_lastchangesec = malloc(3 * sizeof(char));
-	disp_lastchangemin = malloc(3 * sizeof(char));
-	disp_lastchangehour = malloc(3 * sizeof(char));
-	disp_lastchangesec = '00';
-	disp_lastchangemin = '00';
-	disp_lastchangehour = '00';
-
-	disp_seconds = malloc(3 * sizeof(char));
-	disp_minutes = malloc(3 * sizeof(char));
-	disp_hours = malloc(3 * sizeof(char));
+	disp_uptime = malloc(8 * sizeof(char));
+	disp_lastchange = malloc(8 * sizeof(char));
 
 	message = malloc(6 * sizeof(char));
 	avg = 0;
 	lastAvg = 0;
 	setup();
+	int i = 0;
 
+
+	rprintfChar('I');
 	do {
 		//check buttons
 		if ((PINC & (1 << PC0)) && butUpPressed == 0) {
@@ -94,20 +85,18 @@ int main() {
 			if (preset < maxpreset) {
 				preset++;
 				resetcounters();
-				setLastPresetChange();
-
 			}
-		} else {
+		}else if(!(PINC & (1 << PC0)) && butUpPressed == 1){
 			butUpPressed = 0;
 		}
+
 		if ((PINC & (1 << PC1)) && butDnPressed == 0) {
 			butDnPressed = 1;
 			if (preset > 0) {
 				preset--;
 				resetcounters();
-				setLastPresetChange();
 			}
-		} else {
+		}else if(!(PINC & (1 << PC1)) && butDnPressed == 1){
 			butDnPressed = 0;
 		}
 
@@ -124,6 +113,11 @@ int main() {
 			lastpreset = preset;
 		}
 
+		if(requestTime == 1){
+			rprintfChar('T');
+			requestTime = 2;
+		}
+
 		//read preset from PC
 		if (!uartReceiveBufferIsEmpty()) {
 			pc_read = uartGetByte();
@@ -134,6 +128,8 @@ int main() {
 					while(uartReceiveBufferIsEmpty());
 					maxpreset = uartGetByte();
 					preset = 0;
+					while(uartReceiveBufferIsEmpty());
+					progcode = uartGetByte();
 				}else if(pc_read == '$'){
 					while(uartReceiveBufferIsEmpty());
 					presettomodify = uartGetByte();
@@ -150,9 +146,12 @@ int main() {
 					led2Counterdn[presettomodify] = uartGetByte();
 					while(uartReceiveBufferIsEmpty());
 					led3Counterdn[presettomodify] = uartGetByte();
-				}else if(pc_read == '&'){
-					while(uartReceiveBufferIsEmpty());
-					presettomodify = uartGetByte();
+				}else if(pc_read == 'T'){
+					for(i = 0; i < 8; i++){
+						while(uartReceiveBufferIsEmpty());
+						disp_uptime[i] = uartGetByte();
+					}
+					requestTime = 0;
 				}
 			}
 
@@ -196,7 +195,7 @@ static void setup() {
 	TCCR2 |= (1 << CS21); // set prescaler to 64 and starts PWM
 
 
-	//LCD timer interrupt
+	//ADCread+requesttime timer
 	OCR1A = 7930;
 	TCCR1B |= (1 << WGM12);
 	// Mode 4, CTC on OCR1A
@@ -241,6 +240,10 @@ unsigned long adc_read() {
 void LCDWriteStringXY(int x, int y, const char *s) {
 	lcd_gotoxy(y - 1, x - 1);
 	lcd_puts(s);
+}
+void LCDWriteCharXY(int x, int y, char s) {
+	lcd_gotoxy(y - 1, x - 1);
+	lcd_putc(s);
 }
 
 //led setup interrupt 250us
@@ -312,15 +315,12 @@ ISR (TIMER2_COMP_vect)  // timer2 interrupt
 }
 
 ISR (TIMER1_COMPA_vect) {
-
-	seconds++;
-	if(seconds == 60){
-		minutes++;
-		seconds=0;
-	}
-	if(minutes == 60){
-		hours++;
-		minutes=0;
+	if(requestTime == 0){
+		requestTime = 1;
+	}else if(requestTime > 1){
+		requestTime++;
+		if(requestTime == 12)
+			requestTime = 1;
 	}
 
 	avg = 0;
@@ -337,38 +337,17 @@ void resetcounters(){
 	led3Up = 0;
 }
 
-void setLastPresetChange(){
-	snprintf(disp_lastchangesec, 3, "%d", seconds);
-	snprintf(disp_lastchangemin, 3, "%d", minutes);
-	snprintf(disp_lastchangehour, 3, "%d", hours);
-}
-
 void updateLCD(){
 	snprintf(disp_avg, 4, "%lu", avg);
 
-	snprintf(disp_seconds, 3, "%d", seconds);
-	snprintf(disp_minutes, 3, "%d", minutes);
-	snprintf(disp_hours, 3, "%d", hours);
-	lcd_clrscr();
-	LCDWriteStringXY(1, 1, disp_hours);
-	LCDWriteStringXY(1, 3, ":");
-	LCDWriteStringXY(1, 4, disp_minutes);
-	LCDWriteStringXY(1, 6, ":");
-	LCDWriteStringXY(1, 7, disp_seconds);
-
+	LCDWriteStringXY(1, 1, disp_uptime);
+	LCDWriteStringXY(1,9," ");
 	snprintf(disp_preset, 2, "%d", preset);
 	LCDWriteStringXY(1, 10, disp_preset);
 	LCDWriteStringXY(1, 11, "/");
 	snprintf(disp_maxpreset, 2, "%d", maxpreset);
 	LCDWriteStringXY(1, 12, disp_maxpreset);
-
-	LCDWriteStringXY(1, 14, progcode);
-
-	LCDWriteStringXY(2, 6, disp_lastchangehour);
-	LCDWriteStringXY(2, 8, ":");
-	LCDWriteStringXY(2, 9, disp_lastchangemin);
-	LCDWriteStringXY(2, 11, ":");
-	LCDWriteStringXY(2, 12, disp_lastchangesec);
+	LCDWriteCharXY(1, 14, progcode);
 
 	LCDWriteStringXY(2, 1, disp_avg);
 }
