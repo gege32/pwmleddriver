@@ -86,6 +86,9 @@ int main() {
 				preset++;
 				resetcounters();
 			}
+			rprintfChar('P');
+			rprintfNum(10, 4, FALSE, '0', preset);
+			lastpreset = preset;
 		}else if(!(PINC & (1 << PC0)) && butUpPressed == 1){
 			butUpPressed = 0;
 		}
@@ -96,21 +99,11 @@ int main() {
 				preset--;
 				resetcounters();
 			}
-		}else if(!(PINC & (1 << PC1)) && butDnPressed == 1){
-			butDnPressed = 0;
-		}
-
-		//check changes to send to pc
-		if (avg != lastAvg) {
-			rprintfChar('L');
-			rprintfNum(10, 4, FALSE, '0', avg);
-			lastAvg = avg;
-		}
-
-		if (preset != lastpreset) {
 			rprintfChar('P');
 			rprintfNum(10, 4, FALSE, '0', preset);
 			lastpreset = preset;
+		}else if(!(PINC & (1 << PC1)) && butDnPressed == 1){
+			butDnPressed = 0;
 		}
 
 		if(requestTime == 1){
@@ -211,32 +204,6 @@ static void setup() {
 
 }
 
-unsigned long filter_adc() {
-	/*unsigned long adc_value = 0;
-	unsigned long tmp_value = 0;
-	unsigned long sample = 0;
-
-	while (sample < no_of_samples) {
-		adc_value = (adc_read());
-		tmp_value = (tmp_value + ((unsigned long) (adc_value * adc_value)));
-		sample++;
-	}
-
-	adc_value = (tmp_value / no_of_samples);
-	tmp_value = (sqrt(adc_value));
-	return tmp_value;*/
-	return adc_read();
-
-}
-
-unsigned long adc_read() {
-	unsigned long adc_value = 0;
-	ADCSRA |= (1 << ADSC); // Start conversion
-	while (ADCSRA & (1 << ADSC)); // wait for conversion to complete
-	adc_value = ADCW; //Store ADC value
-	return adc_value;
-}
-
 void LCDWriteStringXY(int x, int y, const char *s) {
 	lcd_gotoxy(y - 1, x - 1);
 	lcd_puts(s);
@@ -322,10 +289,6 @@ ISR (TIMER1_COMPA_vect) {
 		if(requestTime == 12)
 			requestTime = 1;
 	}
-
-	avg = 0;
-	avg = filter_adc();
-
 }
 
 void resetcounters(){
